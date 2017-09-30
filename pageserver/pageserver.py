@@ -16,12 +16,14 @@
 import config    # Configure from .ini files and command line
 import logging   # Better than print statements
 logging.basicConfig(format='%(levelname)s:%(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 log = logging.getLogger(__name__)
 # Logging level may be overridden by configuration 
 
 import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
+import codecs
+import os
 
 
 def listen(portnum):
@@ -37,6 +39,7 @@ def listen(portnum):
     # Internet, streaming socket
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Bind to port and make accessible from anywhere that has our IP address
+
     serversocket.bind(('', portnum))
     serversocket.listen(1)    # A real server would have multiple listeners
     return serversocket
@@ -63,10 +66,11 @@ def serve(sock, func):
 # Starter version only serves cat pictures. In fact, only a
 # particular cat picture.  This one.
 ##
-CAT = """
-     ^ ^
-   =(   )=
-"""
+
+
+
+#with codecs.open("trivia.html", 'r') as htmlFile:
+ # data=htmlFile.read().replace('\n', '')
 
 # HTTP response codes, as the strings we will actually send.
 # See:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
@@ -92,7 +96,21 @@ def respond(sock):
     parts = request.split()
     if len(parts) > 1 and parts[0] == "GET":
         transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        file_name='trivia.html'
+        source_path = os.path.join(DOCROOT, file_name)
+        log.debug("Source path: {}".format(source_path))
+        log.info("Path = " + source_path)
+
+        try: 
+          with open(source_path, 'r', encoding='utf-8') as source:
+            for line in source:
+              transmit(line.strip(), sock)
+          
+        except OSError as error:
+          log.warn("Failed to open or read file")
+          log.warn("Requested file was {}".format(source_path))
+          log.warn("Exception: {}".format(error))
+
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
@@ -135,8 +153,11 @@ def get_options():
     return options
 
 
+
 def main():
+    global DOCROOT
     options = get_options()
+    DOCROOT = options.DOCROOT
     port = options.PORT
     if options.DEBUG:
         log.setLevel(logging.DEBUG)
