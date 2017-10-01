@@ -16,7 +16,7 @@
 import config    # Configure from .ini files and command line
 import logging   # Better than print statements
 logging.basicConfig(format='%(levelname)s:%(message)s',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 log = logging.getLogger(__name__)
 # Logging level may be overridden by configuration 
 
@@ -24,7 +24,6 @@ import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
 import codecs
 import os
-
 
 def listen(portnum):
     """
@@ -96,20 +95,22 @@ def respond(sock):
     parts = request.split()
     if len(parts) > 1 and parts[0] == "GET":
         transmit(STATUS_OK, sock)
-        file_name='trivia.html'
-        source_path = os.path.join(DOCROOT, file_name)
+        #source_path = os.path.join(DOCROOT, parts[1])
+        source_path = DOCROOT + parts[1]
         log.debug("Source path: {}".format(source_path))
-        log.info("Path = " + source_path)
-
         try: 
-          with open(source_path, 'r', encoding='utf-8') as source:
-            for line in source:
-              transmit(line.strip(), sock)
-          
+            with open(source_path, 'r', encoding='utf-8') as source:
+              for line in source:
+                 transmit(line.strip(), sock)
         except OSError as error:
-          log.warn("Failed to open or read file")
-          log.warn("Requested file was {}".format(source_path))
-          log.warn("Exception: {}".format(error))
+            log.warn("Failed to open or read file")
+            log.warn("Requested file was {}".format(source_path))
+            log.warn("Exception: {}".format(error))
+            if(".html" not in parts[1] or "//" in parts[1]
+                or "~" in parts[1] or ".." in parts[1]):
+              transmit(STATUS_FORBIDDEN, sock)
+            elif("No such file" in str(error)):
+              transmit(STATUS_NOT_FOUND, sock)
 
     else:
         log.info("Unhandled request: {}".format(request))
@@ -158,6 +159,7 @@ def main():
     global DOCROOT
     options = get_options()
     DOCROOT = options.DOCROOT
+    log.info(DOCROOT)
     port = options.PORT
     if options.DEBUG:
         log.setLevel(logging.DEBUG)
