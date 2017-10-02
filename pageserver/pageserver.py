@@ -93,6 +93,7 @@ def respond(sock):
     log.info("Request was {}\n***\n".format(request))
 
     parts = request.split()
+    # Idea/code via Spew.py included with the starter code.
     if len(parts) > 1 and parts[0] == "GET":
         transmit(STATUS_OK, sock)
         #source_path = os.path.join(DOCROOT, parts[1])
@@ -106,9 +107,12 @@ def respond(sock):
             log.warn("Failed to open or read file")
             log.warn("Requested file was {}".format(source_path))
             log.warn("Exception: {}".format(error))
-            if(".html" not in parts[1] or "//" in parts[1]
-                or "~" in parts[1] or ".." in parts[1]):
+
+            if(".html" not in parts[1] and ".css" not in parts[1]
+                or "//" in parts[1] or "~" in parts[1] 
+                or ".." in parts[1]):
               transmit(STATUS_FORBIDDEN, sock)
+
             elif("No such file" in str(error)):
               transmit(STATUS_NOT_FOUND, sock)
 
